@@ -1,12 +1,32 @@
+ url=https://github.com/Kani201012/webv13/blob/main/templates/index.html.j2
 {% extends "base.html.j2" %}
 {% block body %}
-  <section class="hero">
-    <div class="container">
-      <h1 style="font-size:36px;margin:0 0 12px 0">{{ hero_h }}</h1>
-      <p style="margin:0 0 18px 0;color:#64748b">{{ seo_d }}</p>
-      <a class="btn" href="#inventory">Explore Inventory</a>
-    </div>
-  </section>
+  {# --- Hero variations depending on layout_dna --- #}
+  {% if layout_dna == "Industrial Titan" %}
+    <section class="hero" style="background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);">
+      <div class="container">
+        <h1 style="font-size:44px;margin:0 0 12px 0;letter-spacing:0.01em">{{ hero_h }}</h1>
+        <p style="margin:0 0 18px 0;color:#64748b">{{ seo_d }}</p>
+        <a class="btn" href="#inventory">Access Inventory</a>
+      </div>
+    </section>
+  {% elif layout_dna == "Classic Royal" %}
+    <section class="hero" style="background:linear-gradient(90deg,#fffaf0,#ffffff);">
+      <div class="container">
+        <h1 style="font-family: 'Playfair Display', serif;font-size:48px;margin:0 0 12px 0">{{ hero_h }}</h1>
+        <p style="margin:0 0 18px 0;color:#64748b;font-style:italic">{{ seo_d }}</p>
+        <a class="btn" href="#inventory">Enter Showroom</a>
+      </div>
+    </section>
+  {% else %}
+    <section class="hero">
+      <div class="container">
+        <h1 style="font-size:36px;margin:0 0 12px 0">{{ hero_h }}</h1>
+        <p style="margin:0 0 18px 0;color:#64748b">{{ seo_d }}</p>
+        <a class="btn" href="#inventory">Explore Inventory</a>
+      </div>
+    </section>
+  {% endif %}
 
   <main class="container" id="main">
     <section style="padding:40px 0">
@@ -24,7 +44,21 @@
     <section id="inventory" style="padding:40px 0">
       <h2>Live Inventory</h2>
       <div id="live-data-container" class="grid" style="margin-top:16px">
-        <div class="card" style="padding:28px;text-align:center;color:#94a3b8">Opening Data Hub...</div>
+        {% if products and products|length > 0 %}
+          {% for p in products %}
+            <div class="product-card card" style="cursor:pointer" data-name="{{ p.name|e }}" data-price="{{ p.price|e }}" data-desc="{{ p.desc|e }}" data-img="{{ p.img|e }}" onclick="openProductModal(this)">
+              <img src="{{ p.img or custom_feat }}" alt="{{ p.name|e }}" />
+              <h3 style="margin:12px 0 6px 0;color:var(--p)">{{ p.name }}</h3>
+              <p style="margin:0 0 8px 0;color:#334155">{{ p.desc }}</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+                <div style="font-weight:800;color:var(--s)">{{ p.price }}</div>
+                <a class="btn" href="https://wa.me/{{ biz_phone_wa }}?text={{ ('Hello ' + biz_name + ' - I am interested in ' + p.name) | url_encode }}" target="_blank" style="margin-left:auto">WhatsApp</a>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="card" style="padding:24px;color:#64748b">No products found. Provide a published CSV link in the admin (Google Sheets -> File -> Publish to web -> CSV) or a CSV export URL.</div>
+        {% endif %}
       </div>
     </section>
 
@@ -41,102 +75,27 @@
     {% endif %}
   </main>
 
-  <!-- Product Modal Template -->
-  <template id="product-template">
-    <div class="product-card card" style="padding:18px">
-      <img id="p-img" src="" alt="" style="width:100%;height:220px;object-fit:cover;border-radius:10px;margin-bottom:12px"/>
-      <h3 id="p-name" style="margin:0 0 8px 0;color:var(--p)"></h3>
-      <p id="p-price" style="font-weight:800;color:var(--s);margin:0 0 12px 0"></p>
-      <p id="p-desc" style="color:#64748b"></p>
-      <div style="margin-top:12px">
-        <a id="p-wa" class="btn" href="#" target="_blank">Contact via WhatsApp</a>
-      </div>
-    </div>
-  </template>
-
-  {% if sheet_url %}
   <script>
-  // Robust CSV/pipe parser and renderer
-  (function(){
-    const sheet = "{{ sheet_url }}";
-    const container = document.getElementById('live-data-container');
-    const template = document.getElementById('product-template').content;
-
-    async function fetchAndRender(){
-      try {
-        const res = await fetch(sheet);
-        if(!res.ok) throw new Error('Network error');
-        const text = await res.text();
-        // detect delimiter: prefer '|' if present in header line, else comma
-        const firstLine = text.split('\\n').find(l => l.trim().length>0) || "";
-        const delimiter = (firstLine.includes('|') && (firstLine.split('|').length>1)) ? '|' : ',';
-        const rows = text.trim().split('\\n').map(r => r.split(delimiter).map(c=>c.trim()));
-        // If header-like row present (Name Price ...), try to skip header
-        let startIdx = 0;
-        if(rows.length && rows[0].some(cell => /name|price|description/i.test(cell))) startIdx = 1;
-        const products = [];
-        for(let i=startIdx;i<rows.length;i++){
-          const parts = rows[i];
-          if(parts.length < 1) continue;
-          const p = {
-            id: i,
-            name: parts[0] || '',
-            price: parts[1] || '',
-            desc: parts[2] || '',
-            img: parts[3] || "{{ custom_feat }}"
-          };
-          products.push(p);
-        }
-        // render
-        if(products.length===0){
-          container.innerHTML = '<div class="card" style="padding:24px;color:#64748b">No products found in the provided CSV.</div>';
-          return;
-        }
-        container.innerHTML = '';
-        products.forEach((p, idx) => {
-          const card = template.cloneNode(true);
-          card.querySelector('#p-img').src = p.img;
-          card.querySelector('#p-name').innerText = p.name;
-          card.querySelector('#p-price').innerText = p.price;
-          card.querySelector('#p-desc').innerText = p.desc;
-          const wrapper = document.createElement('div');
-          wrapper.className = 'card';
-          wrapper.style.cursor = 'pointer';
-          wrapper.style.padding = '18px';
-          wrapper.onclick = ()=> openProductModal(p);
-          wrapper.appendChild(card);
-          container.appendChild(wrapper);
-        });
-      } catch(e){
-        container.innerHTML = '<div class="card" style="padding:24px;color:#ff6b6b">Failed to load products: ' + (e.message||'') + '</div>';
-        console.error(e);
-      }
-    }
-
-    function openProductModal(p){
+    function openProductModal(el){
+      const name = el.dataset.name || '';
+      const price = el.dataset.price || '';
+      const desc = el.dataset.desc || '';
+      const img = el.dataset.img || '';
       const modal = document.getElementById('modal');
       const mbody = document.getElementById('m-body');
-      mbody.innerHTML = '';
-      const temp = template.cloneNode(true);
-      temp.querySelector('#p-img').src = p.img;
-      temp.querySelector('#p-name').innerText = p.name;
-      temp.querySelector('#p-price').innerText = p.price;
-      temp.querySelector('#p-desc').innerText = p.desc;
-      const wa = temp.querySelector('#p-wa');
-      const phone = "{{ biz_phone | default('') }}".replace(/\\s+/g,'').replace('+','');
-      const waText = encodeURIComponent("Hello {{ biz_name }} - I'm interested in " + p.name);
-      if(phone){
-        wa.href = "https://wa.me/" + phone + "?text=" + waText;
-      } else {
-        wa.href = "#";
-      }
-      mbody.appendChild(temp);
+      mbody.innerHTML = `
+        <div style="display:flex;gap:18px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px"><img src="${img}" style="width:100%;height:auto;border-radius:10px;object-fit:cover" /></div>
+          <div style="flex:1;min-width:260px">
+            <h2 style="margin-top:0">${name}</h2>
+            <div style="font-weight:800;color:var(--s);margin-bottom:8px">${price}</div>
+            <p style="color:#334155">${desc}</p>
+            <div style="margin-top:16px"><a class="btn" href="https://wa.me/{{ biz_phone_wa }}?text=${encodeURIComponent('Hello {{ biz_name }} - I am interested in ' + name)}" target="_blank">WhatsApp</a></div>
+          </div>
+        </div>
+      `;
       modal.style.display = 'flex';
+      window.scrollTo(0,0);
     }
-
-    // Kick off
-    fetchAndRender();
-  })();
   </script>
-  {% endif %}
 {% endblock %}
