@@ -5,6 +5,7 @@ import csv
 import json
 import re
 import requests
+from urllib.parse import quote_plus
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .sanitizer import clean_html, clean_iframe, ensure_trailing_slash, sanitize_filename
 
@@ -15,6 +16,8 @@ if not os.path.isdir(TEMPLATES_PATH):
 
 env = Environment(loader=FileSystemLoader(TEMPLATES_PATH), autoescape=select_autoescape(["html", "xml"]))
 
+# Register a url encoding filter for templates (used for building WhatsApp links)
+env.filters["url_encode"] = lambda value: quote_plus(str(value)) if value is not None else ""
 
 class SiteBuilder:
     def __init__(self):
