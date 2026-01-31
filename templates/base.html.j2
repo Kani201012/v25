@@ -1,3 +1,4 @@
+ url=https://github.com/Kani201012/webv13/blob/main/templates/base.html.j2
 <!doctype html>
 <html lang="en">
 <head>
@@ -20,6 +21,7 @@
     #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:18px;z-index:9999}
     .modal-inner{background:#fff;border-radius:14px;padding:20px;max-width:900px;width:100%}
     footer{background:#0f172a;color:#fff;padding:40px 0;margin-top:40px}
+    .footer-link{color:#cfeff4;text-decoration:none;font-weight:700;margin-right:12px}
     @media (max-width:720px){ .hero{padding:40px 16px} }
   </style>
   {% block head_extra %}{% endblock %}
@@ -55,11 +57,32 @@
         <div style="max-width:420px;color:#cbd5e1">{{ biz_addr }}</div>
       </div>
       <div>
-        <h4 style="margin:0 0 8px 0">Contact</h4>
-        <div>{{ biz_phone }}</div>
-        <div style="opacity:0.85">{{ biz_email }}</div>
+        <div style="margin-bottom:12px">
+          <a class="footer-link" href="#" onclick="openFooterPage('privacy')">Privacy Policy</a>
+          <a class="footer-link" href="#" onclick="openFooterPage('terms')">Terms & Conditions</a>
+        </div>
+        <div style="opacity:0.85">Direct Connect: <strong>{{ biz_phone }}</strong></div>
+        <div style="margin-top:18px;font-size:12px;opacity:0.7">Architected By <a href="https://www.kaydiemscriptlab.com/" style="color:#9ee7f0;text-decoration:none;font-weight:800">Kaydiem Script Lab</a></div>
       </div>
     </div>
   </footer>
+
+  <script>
+    // Footer page modal helper
+    const privacyHtml = `{{ privacy_html | replace("\n","\\n") | replace("`","\\`") }}`;
+    const termsHtml = `{{ terms_html | replace("\n","\\n") | replace("`","\\`") }}`;
+
+    function openFooterPage(which){
+      const modal = document.getElementById('modal');
+      const mbody = document.getElementById('m-body');
+      if(which === 'privacy'){
+        mbody.innerHTML = '<h2>Privacy Policy</h2>' + privacyHtml;
+      } else {
+        mbody.innerHTML = '<h2>Terms & Conditions</h2>' + termsHtml;
+      }
+      modal.style.display = 'flex';
+      window.scrollTo(0,0);
+    }
+  </script>
 </body>
 </html>
