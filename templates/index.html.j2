@@ -11,9 +11,9 @@
   <main class="container" id="main">
     <section style="padding:40px 0">
       <h2>Our Services</h2>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">
+      <div class="grid" style="margin-top:16px">
         {% for s in biz_serv %}
-          <div class="product-card" style="padding:20px">
+          <div class="card">
             <h3 style="margin:0 0 8px 0;color:var(--p)">{{ s }}</h3>
             <p style="color:#64748b">Verified technical solution.</p>
           </div>
@@ -23,8 +23,8 @@
 
     <section id="inventory" style="padding:40px 0">
       <h2>Live Inventory</h2>
-      <div id="live-data-container" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">
-        <p style="color:#94a3b8">Opening Data Hub...</p>
+      <div id="live-data-container" class="grid" style="margin-top:16px">
+        <div class="card" style="padding:28px;text-align:center;color:#94a3b8">Opening Data Hub...</div>
       </div>
     </section>
 
@@ -40,4 +40,103 @@
     </section>
     {% endif %}
   </main>
+
+  <!-- Product Modal Template -->
+  <template id="product-template">
+    <div class="product-card card" style="padding:18px">
+      <img id="p-img" src="" alt="" style="width:100%;height:220px;object-fit:cover;border-radius:10px;margin-bottom:12px"/>
+      <h3 id="p-name" style="margin:0 0 8px 0;color:var(--p)"></h3>
+      <p id="p-price" style="font-weight:800;color:var(--s);margin:0 0 12px 0"></p>
+      <p id="p-desc" style="color:#64748b"></p>
+      <div style="margin-top:12px">
+        <a id="p-wa" class="btn" href="#" target="_blank">Contact via WhatsApp</a>
+      </div>
+    </div>
+  </template>
+
+  {% if sheet_url %}
+  <script>
+  // Robust CSV/pipe parser and renderer
+  (function(){
+    const sheet = "{{ sheet_url }}";
+    const container = document.getElementById('live-data-container');
+    const template = document.getElementById('product-template').content;
+
+    async function fetchAndRender(){
+      try {
+        const res = await fetch(sheet);
+        if(!res.ok) throw new Error('Network error');
+        const text = await res.text();
+        // detect delimiter: prefer '|' if present in header line, else comma
+        const firstLine = text.split('\\n').find(l => l.trim().length>0) || "";
+        const delimiter = (firstLine.includes('|') && (firstLine.split('|').length>1)) ? '|' : ',';
+        const rows = text.trim().split('\\n').map(r => r.split(delimiter).map(c=>c.trim()));
+        // If header-like row present (Name Price ...), try to skip header
+        let startIdx = 0;
+        if(rows.length && rows[0].some(cell => /name|price|description/i.test(cell))) startIdx = 1;
+        const products = [];
+        for(let i=startIdx;i<rows.length;i++){
+          const parts = rows[i];
+          if(parts.length < 1) continue;
+          const p = {
+            id: i,
+            name: parts[0] || '',
+            price: parts[1] || '',
+            desc: parts[2] || '',
+            img: parts[3] || "{{ custom_feat }}"
+          };
+          products.push(p);
+        }
+        // render
+        if(products.length===0){
+          container.innerHTML = '<div class="card" style="padding:24px;color:#64748b">No products found in the provided CSV.</div>';
+          return;
+        }
+        container.innerHTML = '';
+        products.forEach((p, idx) => {
+          const card = template.cloneNode(true);
+          card.querySelector('#p-img').src = p.img;
+          card.querySelector('#p-name').innerText = p.name;
+          card.querySelector('#p-price').innerText = p.price;
+          card.querySelector('#p-desc').innerText = p.desc;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'card';
+          wrapper.style.cursor = 'pointer';
+          wrapper.style.padding = '18px';
+          wrapper.onclick = ()=> openProductModal(p);
+          wrapper.appendChild(card);
+          container.appendChild(wrapper);
+        });
+      } catch(e){
+        container.innerHTML = '<div class="card" style="padding:24px;color:#ff6b6b">Failed to load products: ' + (e.message||'') + '</div>';
+        console.error(e);
+      }
+    }
+
+    function openProductModal(p){
+      const modal = document.getElementById('modal');
+      const mbody = document.getElementById('m-body');
+      mbody.innerHTML = '';
+      const temp = template.cloneNode(true);
+      temp.querySelector('#p-img').src = p.img;
+      temp.querySelector('#p-name').innerText = p.name;
+      temp.querySelector('#p-price').innerText = p.price;
+      temp.querySelector('#p-desc').innerText = p.desc;
+      const wa = temp.querySelector('#p-wa');
+      const phone = "{{ biz_phone | default('') }}".replace(/\\s+/g,'').replace('+','');
+      const waText = encodeURIComponent("Hello {{ biz_name }} - I'm interested in " + p.name);
+      if(phone){
+        wa.href = "https://wa.me/" + phone + "?text=" + waText;
+      } else {
+        wa.href = "#";
+      }
+      mbody.appendChild(temp);
+      modal.style.display = 'flex';
+    }
+
+    // Kick off
+    fetchAndRender();
+  })();
+  </script>
+  {% endif %}
 {% endblock %}
