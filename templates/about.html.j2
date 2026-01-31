@@ -1,0 +1,12 @@
+{% extends "base.html.j2" %}
+{% block body %}
+  <main class="container">
+    <section style="padding:40px 0">
+      <h1>About {{ biz_name }}</h1>
+      <div style="color:#334155">{{ about_txt | safe }}</div>
+      {% if custom_gall %}
+        <img src="{{ custom_gall }}" alt="About image" style="width:100%;max-height:500px;object-fit:cover;margin-top:24px;border-radius:12px" />
+      {% endif %}
+    </section>
+  </main>
+{% endblock %}
