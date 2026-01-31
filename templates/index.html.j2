@@ -1,0 +1,43 @@
+{% extends "base.html.j2" %}
+{% block body %}
+  <section class="hero">
+    <div class="container">
+      <h1 style="font-size:36px;margin:0 0 12px 0">{{ hero_h }}</h1>
+      <p style="margin:0 0 18px 0;color:#64748b">{{ seo_d }}</p>
+      <a class="btn" href="#inventory">Explore Inventory</a>
+    </div>
+  </section>
+
+  <main class="container" id="main">
+    <section style="padding:40px 0">
+      <h2>Our Services</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">
+        {% for s in biz_serv %}
+          <div class="product-card" style="padding:20px">
+            <h3 style="margin:0 0 8px 0;color:var(--p)">{{ s }}</h3>
+            <p style="color:#64748b">Verified technical solution.</p>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="inventory" style="padding:40px 0">
+      <h2>Live Inventory</h2>
+      <div id="live-data-container" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">
+        <p style="color:#94a3b8">Opening Data Hub...</p>
+      </div>
+    </section>
+
+    <section style="padding:40px 0">
+      <h2>About</h2>
+      <div style="color:#334155">{{ about_txt | safe }}</div>
+    </section>
+
+    {% if map_iframe %}
+    <section style="padding:40px 0">
+      <h2>Location</h2>
+      <div>{{ map_iframe | safe }}</div>
+    </section>
+    {% endif %}
+  </main>
+{% endblock %}
