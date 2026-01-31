@@ -2,12 +2,10 @@ import os
 import io
 import zipfile
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from .sanitizer import clean_html, clean_iframe, sanitize_filename, ensure_trailing_slash
+from .sanitizer import clean_html, clean_iframe, ensure_trailing_slash
 
+# Determine templates path (repo templates/ folder)
 TEMPLATES_PATH = os.path.join(os.path.dirname(__file__), "templates")
-
-# If templates are kept at repository root templates/ path
-# Fallback to top-level templates directory
 if not os.path.isdir(TEMPLATES_PATH):
     TEMPLATES_PATH = os.path.join(os.getcwd(), "templates")
 
@@ -19,16 +17,8 @@ class SiteBuilder:
         self.env = env
 
     def render_home(self, context: dict, is_home: bool = False) -> str:
-        """
-        Renders the index.html using the index template and sanitized context.
-        """
         ctx = self._sanitize_context(context)
         tpl = self.env.get_template("index.html.j2")
-        return tpl.render(**ctx)
-
-    def render_about(self, context: dict) -> str:
-        ctx = self._sanitize_context(context)
-        tpl = self.env.get_template("about.html.j2")
         return tpl.render(**ctx)
 
     def _sanitize_context(self, context: dict) -> dict:
@@ -37,25 +27,22 @@ class SiteBuilder:
         for k in ["about_txt", "seo_d", "hero_h", "biz_name", "biz_addr", "biz_email", "biz_cat"]:
             if out.get(k):
                 out[k] = clean_html(str(out.get(k)))
-        # sanitize iframe field
+        # sanitize iframe
         out["map_iframe"] = clean_iframe(out.get("map_iframe", ""))
-        # ensure prod_url trailing slash for sitemap/robots
         out["prod_url"] = ensure_trailing_slash(out.get("prod_url", ""))
-        # ensure service list items sanitized
+        # ensure biz_serv entries are cleaned
         out["biz_serv"] = [clean_html(s) for s in out.get("biz_serv", [])]
+        # default image fallbacks
+        out.setdefault("custom_hero", out.get("custom_hero") or "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1600")
+        out.setdefault("custom_feat", out.get("custom_feat") or "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800")
+        out.setdefault("custom_gall", out.get("custom_gall") or "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&q=80&w=1600")
         return out
 
     def build_zip(self, context: dict, output_io: io.BytesIO):
-        """
-        Create a ZIP with generated site files.
-        Writes into provided BytesIO.
-        """
         ctx = self._sanitize_context(context)
-
         with zipfile.ZipFile(output_io, "w", zipfile.ZIP_DEFLATED) as zf:
             index = self.env.get_template("index.html.j2").render(**ctx)
             about = self.env.get_template("about.html.j2").render(**ctx)
-            # contact uses simple about content fallback
             contact = self.env.get_template("about.html.j2").render(**ctx)
 
             zf.writestr("index.html", index)
